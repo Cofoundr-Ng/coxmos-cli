@@ -146,6 +146,26 @@ var dnsRemoveCmd = &cobra.Command{
 	},
 }
 
+var dnsDKIMCmd = &cobra.Command{
+	Use:   "dkim <domain>",
+	Short: "Add DKIM signing record for a domain",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireAuth(cmd, args); err != nil {
+			return err
+		}
+		domain := args[0]
+		fmt.Print(tui.SpinnerStyle.Render("⠋") + " Adding DKIM record for " + domain + "...")
+		if err := client.AddDKIMRecord(domain); err != nil {
+			fmt.Print("\r" + tui.CrossMark.String() + "\n")
+			return fmt.Errorf("dkim: %w", err)
+		}
+		fmt.Print("\r" + tui.CheckMark.String() + " " + tui.SuccessStyle.Render("DKIM record added for "+domain))
+		fmt.Println()
+		return nil
+	},
+}
+
 var dnsAttachCmd = &cobra.Command{
 	Use:   "attach <domain> <app-slug>",
 	Short: "Attach a custom domain to an app",
@@ -172,6 +192,7 @@ func init() {
 	dnsCmd.AddCommand(dnsVerifyCmd)
 	dnsCmd.AddCommand(dnsRecordsCmd)
 	dnsCmd.AddCommand(dnsRemoveCmd)
+	dnsCmd.AddCommand(dnsDKIMCmd)
 	dnsCmd.AddCommand(dnsAttachCmd)
 	rootCmd.AddCommand(dnsCmd)
 }

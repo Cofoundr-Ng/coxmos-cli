@@ -406,6 +406,11 @@ func (c *Client) ListDNSRecords(domain string) ([]DNSRecord, error) {
 	return res.Records, err
 }
 
+func (c *Client) AddDKIMRecord(domain string) error {
+	_, err := c.do("POST", "/api/v1/dns/dkim", RegisterDomainReq{Domain: domain}, nil)
+	return err
+}
+
 func (c *Client) AttachDomain(domain, appSlug string) error {
 	_, err := c.do("POST", "/api/v1/dns/domains/attach", AttachDomainReq{Domain: domain, AppSlug: appSlug}, nil)
 	return err
