@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 
 	"github.com/Cofoundr-Ng/coxmos-cli/internal/tui"
 	"github.com/spf13/cobra"
@@ -25,11 +25,15 @@ func assetName() string {
 	}
 	switch osName {
 	case "darwin":
-		osName = "darwin"
 	case "linux":
+	default:
 		osName = "linux"
 	}
 	return "coxmos-" + osName + "-" + arch
+}
+
+type ghRelease struct {
+	TagName string `json:"tag_name"`
 }
 
 var updateCmd = &cobra.Command{
@@ -45,7 +49,6 @@ var updateCmd = &cobra.Command{
 		}
 
 		asset := assetName()
-
 		fmt.Println(tui.InfoStyle.Render("  Checking latest version..."))
 
 		resp, err := http.Get("https://api.github.com/repos/" + updateRepo + "/releases/latest")
@@ -54,21 +57,23 @@ var updateCmd = &cobra.Command{
 		}
 		defer resp.Body.Close()
 
-		var tag string
-		body, _ := io.ReadAll(resp.Body)
-		for _, line := range strings.Split(string(body), "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, `"tag_name"`) {
-				tag = strings.Trim(strings.Split(line, ":")[1], ` ",`)
-				break
-			}
+		if resp.StatusCode == 403 || resp.StatusCode == 429 {
+			return fmt.Errorf("GitHub API rate limited. Try again later or set GH_TOKEN")
 		}
-		if tag == "" {
+		if resp.StatusCode != 200 {
+			return fmt.Errorf("GitHub API returned %s", resp.Status)
+		}
+
+		var release ghRelease
+		if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+			return fmt.Errorf("parse response: %w", err)
+		}
+		if release.TagName == "" {
 			return fmt.Errorf("could not determine latest version")
 		}
 
-		url := "https://github.com/" + updateRepo + "/releases/download/" + tag + "/" + asset
-		fmt.Println(tui.InfoStyle.Render("  Latest: " + tag))
+		url := "https://github.com/" + updateRepo + "/releases/download/" + release.TagName + "/" + asset
+		fmt.Println(tui.InfoStyle.Render("  Latest: " + release.TagName))
 		fmt.Println(tui.DimStyle.Render("  Downloading " + asset + "..."))
 
 		tmp, err := os.CreateTemp("", "coxmos-*")
@@ -84,7 +89,7 @@ var updateCmd = &cobra.Command{
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			return fmt.Errorf("download failed: %s", resp.Status)
+			return fmt.Errorf("download failed: %s (asset: %s)", resp.Status, asset)
 		}
 
 		written, err := io.Copy(tmp, resp.Body)
@@ -98,12 +103,12 @@ var updateCmd = &cobra.Command{
 		}
 
 		if err := os.Rename(tmp.Name(), exe); err != nil {
-			return fmt.Errorf("replace binary at %s: %w", exe, err)
+			return fmt.Errorf("replace binary at %s: %w\nTry: sudo mv %s %s", exe, err, tmp.Name(), exe)
 		}
 
 		fmt.Print("\r" + tui.CheckMark.String() + "\n")
 		fmt.Println()
-		fmt.Println(tui.SuccessStyle.Render(fmt.Sprintf("  Updated to %s (%d bytes)", tag, written)))
+		fmt.Println(tui.SuccessStyle.Render(fmt.Sprintf("  Updated to %s (%d bytes)", release.TagName, written)))
 		return nil
 	},
 }
