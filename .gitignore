@@ -27,3 +27,7 @@ coxmos/.build/
 coxmos
 .build/
 
+coxmos
+coxmos-cli
+.build/
+
