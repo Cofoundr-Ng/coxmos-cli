@@ -415,3 +415,157 @@ func (c *Client) AttachDomain(domain, appSlug string) error {
 	_, err := c.do("POST", "/api/v1/dns/domains/attach", AttachDomainReq{Domain: domain, AppSlug: appSlug}, nil)
 	return err
 }
+
+// --- Admin ---
+
+type AdminUser struct {
+	ID            string `json:"id"`
+	Role          string `json:"role"`
+	Suspended     bool   `json:"suspended"`
+	Email         string `json:"email"`
+	FirstName     string `json:"first_name"`
+	LastName      string `json:"last_name"`
+	CreatedAt     string `json:"created_at"`
+	GitUsername   string `json:"git_username"`
+	Verified      bool   `json:"verified"`
+	AppCount      int    `json:"app_count"`
+	DatabaseCount int    `json:"database_count"`
+	RedisCount    int    `json:"redis_count"`
+}
+
+type AdminApp struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Framework string `json:"framework"`
+	Status    string `json:"status"`
+	URI       string `json:"uri"`
+	UserID    string `json:"user_id"`
+	UserEmail string `json:"user_email"`
+	CreatedAt string `json:"created_at"`
+}
+
+type AdminDB struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	DBType    string `json:"db_type"`
+	Kind      string `json:"kind"`
+	Status    string `json:"status"`
+	UserID    string `json:"user_id"`
+	UserEmail string `json:"user_email"`
+	CreatedAt string `json:"created_at"`
+}
+
+type AdminRedis struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	MemoryMB  int    `json:"memory_mb"`
+	UserID    string `json:"user_id"`
+	UserEmail string `json:"user_email"`
+	CreatedAt string `json:"created_at"`
+}
+
+type AdminStats struct {
+	Users     int64 `json:"users"`
+	Apps      int64 `json:"apps"`
+	Databases int64 `json:"databases"`
+	Redis     int64 `json:"redis"`
+	Buckets   int64 `json:"buckets"`
+}
+
+func (c *Client) AdminListUsers() ([]AdminUser, error) {
+	var res struct {
+		Users []AdminUser `json:"users"`
+	}
+	_, err := c.do("GET", "/admin/users", nil, &res)
+	return res.Users, err
+}
+
+func (c *Client) AdminGetUser(id string) (*AdminUser, error) {
+	var res struct {
+		User AdminUser `json:"user"`
+	}
+	_, err := c.do("GET", "/admin/users/"+id, nil, &res)
+	return &res.User, err
+}
+
+func (c *Client) AdminListApps() ([]AdminApp, error) {
+	var res struct {
+		Apps []AdminApp `json:"apps"`
+	}
+	_, err := c.do("GET", "/admin/apps", nil, &res)
+	return res.Apps, err
+}
+
+func (c *Client) AdminListDatabases() ([]AdminDB, error) {
+	var res struct {
+		Databases []AdminDB `json:"databases"`
+	}
+	_, err := c.do("GET", "/admin/databases", nil, &res)
+	return res.Databases, err
+}
+
+func (c *Client) AdminListRedis() ([]AdminRedis, error) {
+	var res struct {
+		Redis []AdminRedis `json:"redis"`
+	}
+	_, err := c.do("GET", "/admin/redis", nil, &res)
+	return res.Redis, err
+}
+
+func (c *Client) AdminStats() (*AdminStats, error) {
+	var res AdminStats
+	_, err := c.do("GET", "/admin/stats", nil, &res)
+	return &res, err
+}
+
+func (c *Client) AdminSuspendUser(id string) error {
+	_, err := c.do("POST", "/admin/users/"+id+"/suspend", nil, nil)
+	return err
+}
+
+func (c *Client) AdminRestoreUser(id string) error {
+	_, err := c.do("POST", "/admin/users/"+id+"/restore", nil, nil)
+	return err
+}
+
+func (c *Client) AdminDeleteUser(id string) error {
+	_, err := c.do("DELETE", "/admin/users/"+id, nil, nil)
+	return err
+}
+
+func (c *Client) AdminStopApp(slug string) error {
+	_, err := c.do("POST", "/admin/apps/"+slug+"/stop", nil, nil)
+	return err
+}
+
+func (c *Client) AdminStartApp(slug string) error {
+	_, err := c.do("POST", "/admin/apps/"+slug+"/start", nil, nil)
+	return err
+}
+
+func (c *Client) AdminRestartApp(slug string) error {
+	_, err := c.do("POST", "/admin/apps/"+slug+"/restart", nil, nil)
+	return err
+}
+
+func (c *Client) AdminDeleteApp(slug string) error {
+	_, err := c.do("DELETE", "/admin/apps/"+slug, nil, nil)
+	return err
+}
+
+func (c *Client) AdminDeleteDatabase(id string) error {
+	_, err := c.do("DELETE", "/admin/databases/"+id, nil, nil)
+	return err
+}
+
+func (c *Client) AdminRegisterDomain(domain string) error {
+	_, err := c.do("POST", "/admin/domains", map[string]string{"domain": domain}, nil)
+	return err
+}
+
+func (c *Client) AdminRemoveDomain(domain string) error {
+	_, err := c.do("DELETE", "/admin/domains/"+domain, nil, nil)
+	return err
+}
