@@ -15,7 +15,7 @@ import (
 var cfg *config.Config
 var client *api.Client
 
-var version = "0.1.0"
+var version = "1.1.0"
 
 var rootCmd = &cobra.Command{
 	Use:     "coxmos",
